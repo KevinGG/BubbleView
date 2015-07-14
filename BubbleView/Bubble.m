@@ -18,6 +18,8 @@
     BOOL bubbleZoomEnabled;
     BOOL bubbleDragAlwaysTraceBack;
     BOOL bubbleDefaultCollisionEnabled;
+    BOOL bubbleFloatEnabled;
+    CGFloat randomFloatDuration;
     
     CGRect traceBackFrame;
 }
@@ -38,7 +40,8 @@
         bubbleDragEnabled = NO;
         bubbleZoomEnabled = YES;
         bubbleDragAlwaysTraceBack = NO;
-        bubbleDefaultCollisionEnabled = NO;
+        bubbleDefaultCollisionEnabled = YES;
+        bubbleFloatEnabled = YES;
         
         
         self.layer.cornerRadius = self.frame.size.width/2.0;
@@ -48,7 +51,11 @@
         [self initTapGesture];
         
         //set the auto refresh
-        //[NSTimer scheduledTimerWithTimeInterval:1.0/60.0 target:self selector:@selector(autoRefresh) userInfo:nil repeats:YES];
+        [NSTimer scheduledTimerWithTimeInterval:1.0/60.0 target:self selector:@selector(autoRefresh) userInfo:nil repeats:YES];
+        
+        //set the float refresh
+        randomFloatDuration = 1.5+arc4random()%20/10;
+        [NSTimer scheduledTimerWithTimeInterval:randomFloatDuration target:self selector:@selector(bubbleFloat) userInfo:nil repeats:YES];
     }
     return self;
 }
@@ -95,6 +102,14 @@
     bubbleDefaultCollisionEnabled = NO;
 }
 
+- (void)bubbleFloatEnable{
+    bubbleFloatEnabled = YES;
+}
+
+- (void)bubbleFloatDisable{
+    bubbleFloatEnabled = NO;
+}
+
 
 //return radius
 - (CGFloat)radius{
@@ -122,7 +137,7 @@
         bubbleFrame.origin.x += unit;
     }
     
-    [UIView animateWithDuration:duration delay:totalDelay options:UIViewAnimationOptionCurveEaseIn
+    [UIView animateWithDuration:duration delay:totalDelay options:UIViewAnimationOptionCurveEaseInOut|UIViewAnimationOptionAllowUserInteraction
                      animations:^{
         self.frame = bubbleFrame;
     } completion:^(BOOL finished) {
@@ -138,7 +153,7 @@
     }else{
         bubbleFrame.origin.y += unit;
     }
-    [UIView animateWithDuration:duration delay:totalDelay options:UIViewAnimationOptionCurveEaseIn                     animations:^{
+    [UIView animateWithDuration:duration delay:totalDelay options:UIViewAnimationOptionCurveEaseInOut|UIViewAnimationOptionAllowUserInteraction                     animations:^{
         self.frame = bubbleFrame;
     }completion:^(BOOL finished) {
 //        NSString* direction = up?@"up":@"down";
@@ -215,14 +230,26 @@
 }
 
 - (void)bubbleFloat{
-    CGFloat randomX = arc4random()%20;
-    CGFloat randomY = arc4random()%20;
-    [self bubbleMove:CGPointMake(randomX, randomY) duration:0.6];
-    [self addDelay:0.6];
-    [self bubbleMove:CGPointMake(-randomX, -randomY) duration:0.6];
+    if(!bubbleFloatEnabled) return;
+    CGFloat randomX = arc4random()%21;
+    CGFloat randomY = arc4random()%21;
+    [self bubbleMove:CGPointMake(randomX, -randomY) duration:randomFloatDuration];
+    [self addDelay:randomFloatDuration];
+    [self bubbleMove:CGPointMake(-randomX, randomY) duration:randomFloatDuration];
     [self clearDelay];
 }
 
+//default collision animation, self to the bubble collide
+- (void)bubbleDefaultCollideWith:(Bubble *)bubble{
+    if(!bubbleDefaultCollisionEnabled) return;
+    CGFloat moveLeftFor = [self radius] + [bubble radius] - fabs(self.center.x - bubble.center.x);
+    CGFloat moveRightFor = [self radius] + [bubble radius] - fabs(self.center.y - bubble.center.y);
+    
+    moveLeftFor = moveLeftFor > bubble.frame.origin.x ? bubble.frame.origin.x : moveLeftFor;
+    CGRect screenRect = [[UIScreen mainScreen]bounds];
+    
+    [bubble bubbleMove:CGPointMake(moveLeftFor,moveRightFor)];
+}
 
 #pragma mark - Tap Gesture
 - (void)initTapGesture{
@@ -277,6 +304,18 @@
 }
 
 
+#pragma mark - default collision detect
++ (BOOL)detectDefaultCollideFrom:(Bubble*)a to:(Bubble*)b{
+    //no bubble collide itself
+    if(a.tag == b.tag) return NO;
+    CGFloat dx = a.center.x - b.center.x;
+    CGFloat dy = a.center.y - b.center.y;
+    CGFloat dpow2 = pow(dx, 2.0) + pow(dy, 2.0);
+    if(dpow2 >= pow([a radius] + [b radius], 2.0)) return NO;
+    else return YES;
+}
+
+
 #pragma mark - bubble elements
 //set imageview
 - (void)setImage:(NSString *)imageName{
@@ -290,7 +329,7 @@
 
 #pragma mark - bubble refresh: 60fps
 - (void)autoRefresh{
-    [self bubbleFloat];
+    [_bubbleDelegate defaultCollide:self];
 }
 
 

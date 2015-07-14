@@ -20,7 +20,7 @@
     
     Bubble *bubble1;
     Bubble *bubble2;
-    NSMutableArray *bubbleArray;//tag starts from 4
+    NSMutableArray *bubbleArray;//tag starts from 1 except 3
     Timeline *timeline;
     
     Bubble *collection;
@@ -72,6 +72,9 @@
     //enable Drag on bubble1 and bubble2
     [bubble1 bubbleDragEnable];
     [bubble2 bubbleDragEnable];
+    [bubble1 bubbleDefaultCollisionDisable];
+    [bubble2 bubbleDefaultCollisionDisable];
+    
     
     timeline = [[Timeline alloc]init];
     
@@ -79,6 +82,8 @@
     collection = [[Bubble alloc]initWithFrame:CGRectMake(screenWidth/2.0 - 50, screenHeight - 100, 100, 100)];
     collection.tag = 3;
     [collection setBackgroundColor:Rgb2UIColor(arc4random()%255, arc4random()%255, arc4random()%255, 0.5)];
+    [collection bubbleFloatDisable];
+    [collection bubbleDefaultCollisionDisable];
     
     [self.view addSubview:collection];
     collection.bubbleDelegate = self;
@@ -90,6 +95,9 @@
     
     
     bubbleArray = [[NSMutableArray alloc]init];
+    [bubbleArray addObject:bubble1];
+    [bubbleArray addObject:bubble2];
+    
     Bubble *bubbleEntry;
     CGFloat originX = 5;
     CGFloat originY = screenHeight/2.0 - 160;
@@ -99,20 +107,21 @@
         [bubbleEntry bubbleDragEnable];
         [bubbleEntry setBackgroundColor:Rgb2UIColor(arc4random()%255, arc4random()%255, arc4random()%255, 0.5)];
         bubbleEntry.bubbleDelegate = self;
+        [bubbleEntry bubbleDefaultCollisionDisable];
         [bubbleArray addObject:bubbleEntry];
         [self.view addSubview:bubbleEntry];
         originX += 100;
     }
-    bubbleEntry = [bubbleArray objectAtIndex:0];
+    bubbleEntry = [bubbleArray objectAtIndex:2];
     [bubbleEntry setImage:@"lion.jpg"];
     bubbleEntry.title = @"lion";
-    bubbleEntry = [bubbleArray objectAtIndex:1];
+    bubbleEntry = [bubbleArray objectAtIndex:3];
     [bubbleEntry setImage:@"monkey.jpg"];
     bubbleEntry.title = @"monkey";
-    bubbleEntry = [bubbleArray objectAtIndex:2];
+    bubbleEntry = [bubbleArray objectAtIndex:4];
     [bubbleEntry setImage:@"fox.jpg"];
     bubbleEntry.title = @"fox";
-    bubbleEntry = [bubbleArray objectAtIndex:3];
+    bubbleEntry = [bubbleArray objectAtIndex:5];
     [bubbleEntry setImage:@"pig.jpeg"];
     bubbleEntry.title = @"pig";
     
@@ -195,16 +204,10 @@
     
 }
 
+//self defined collision condition, often used to detect collision with collection bubble
 - (BOOL)detectCollideWith:(id)thisBubble{
     Bubble *bubble = (Bubble *)thisBubble;
-    //no bubble collide with itself
-    if (bubble.tag == collection.tag) return NO;
-    
-    CGFloat dx = collection.center.x - bubble.center.x;
-    CGFloat dy = collection.center.y - bubble.center.y;
-    CGFloat dpow2 = pow(dx, 2.0) + pow(dy, 2.0);
-    if(dpow2 >= pow([collection radius] + [bubble radius], 2.0)) return NO;
-    else return YES;
+    return [Bubble detectDefaultCollideFrom:bubble to:collection];
 }
 
 //called on touchesMove
@@ -226,12 +229,25 @@
     [collection addDelay:0.2];
     [collection bubbleZoom:1.0 duration:0.2];
     
+    [bubble bubbleFloatDisable];
     [collectedBubbleArray addObject:bubble];
     
 }
 
+//called autoFresh inside any bubble
+- (void)defaultCollide:(id)thisBubble{
+    Bubble *bubble = (Bubble *)thisBubble;
+    for (Bubble *anotherBubble in bubbleArray) {
+        if([Bubble detectDefaultCollideFrom:bubble to:anotherBubble] && anotherBubble.tag != collection.tag){
+            [bubble bubbleDefaultCollideWith:anotherBubble];
+        }
+    }
+}
 
-#pragma mark - display collection with UITableView
+
+
+
+#pragma mark - display collection with customized UIView
 - (void)displayCollection{
     if(!collectionOpened){
         collectionTable = [[UIScrollView alloc]initWithFrame:CGRectMake(0, collection.frame.origin.y - 50, screenWidth, 0)];

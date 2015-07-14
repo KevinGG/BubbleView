@@ -18,6 +18,8 @@
 //customize collide effects
 - (void)onCollide:(id)thisBubble;
 - (void)afterCollide:(id)thisBubble;
+- (void)defaultCollide:(id)thisBubble;
+
 @end
 
 @interface Bubble : UIView
@@ -37,6 +39,8 @@
 - (void)bubbleZoomDisable;
 - (void)bubbleDefaultCollisionEnable;
 - (void)bubbleDefaultCollisionDisable;
+- (void)bubbleFloatEnable;
+- (void)bubbleFloatDisable;
 
 //return radius
 - (CGFloat)radius;
@@ -51,10 +55,15 @@
 - (void)bubbleFadeIn;
 - (void)bubbleFlip;
 - (void)bubbleSpin;
+- (void)bubbleFloat;
+- (void)bubbleDefaultCollideWith:(Bubble *)bubble;
 
 //timeline
 - (void)addDelay:(NSTimeInterval)delay;
 - (void)clearDelay;
+
+//default collision detect
++ (BOOL)detectDefaultCollideFrom:(Bubble*)a to:(Bubble*)b;
 
 //embedded elements
 - (void)setImage:(NSString*)imageName;
